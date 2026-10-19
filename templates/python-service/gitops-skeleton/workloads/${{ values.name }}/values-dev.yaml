@@ -1,0 +1,9 @@
+# Rendered by the python-service golden path. CI bumps image.tag on every merge to main.
+image:
+  repository: ${{ values.image }}
+  tag: "0.0.0-bootstrap"
+serviceMonitor:
+  enabled: true
+istio:
+  enabled: true
+  hosts: ["${{ values.name }}.dev.example.com"]

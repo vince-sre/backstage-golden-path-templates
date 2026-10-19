@@ -1,0 +1,11 @@
+# Promote by PR: copy the tag that has soaked in dev.
+image:
+  repository: ${{ values.image }}
+  tag: "0.0.0-bootstrap"
+serviceMonitor:
+  enabled: true
+istio:
+  enabled: true
+  hosts: ["${{ values.name }}.example.com"]
+autoscaling:
+  maxReplicas: {% if values.tier == 'tier-1' %}20{% else %}10{% endif %}

@@ -1,0 +1,44 @@
+# One Argo CD Application per environment. The {{ }} expressions below are
+# ApplicationSet Go templates, kept literal with raw blocks during scaffolding.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: ${{ values.name }}
+  namespace: argocd
+  labels:
+    platform.example.com/tier: ${{ values.tier }}
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - env: dev
+            replicas: "1"
+          - env: prod
+            replicas: "{% if values.tier == 'tier-1' %}3{% else %}2{% endif %}"
+  template:
+    metadata:
+      name: "${{ values.name }}-{% raw %}{{.env}}{% endraw %}"
+    spec:
+      project: teams
+      source:
+        repoURL: https://github.com/${{ values.gitopsRepo }}.git
+        targetRevision: main
+        path: charts/microservice
+        helm:
+          releaseName: ${{ values.name }}
+          valueFiles:
+            - "../../workloads/${{ values.name }}/values-{% raw %}{{.env}}{% endraw %}.yaml"
+          parameters:
+            - name: autoscaling.minReplicas
+              value: "{% raw %}{{.replicas}}{% endraw %}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "team-${{ values.name }}-{% raw %}{{.env}}{% endraw %}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
