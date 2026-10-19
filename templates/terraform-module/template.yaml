@@ -1,0 +1,91 @@
+# Golden path: a reusable Terraform module repo with the platform's
+# conventions (pinned versions, standard tags, fmt/validate/tflint CI, an
+# example that CI validates, TechDocs). It starts as a naming/tagging module,
+# since every module needs one; add resources on top.
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: terraform-module
+  title: Terraform module
+  description: >-
+    Reusable Terraform module repo with pinned providers, standard naming and
+    tags, an example, fmt/validate/tflint CI and TechDocs.
+  tags: [terraform, iac, recommended]
+spec:
+  owner: group:default/platform-team
+  type: library
+
+  parameters:
+    - title: Module details
+      required: [name, description, owner, provider]
+      properties:
+        name:
+          title: Module name
+          type: string
+          description: Without the terraform-<provider>- prefix, e.g. "s3-bucket"
+          pattern: "^[a-z][a-z0-9-]{1,40}[a-z0-9]$"
+        description:
+          title: Description
+          type: string
+          maxLength: 200
+        owner:
+          title: Owner
+          type: string
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+        provider:
+          title: Cloud provider
+          type: string
+          default: aws
+          enum: [aws, google, azurerm]
+          enumNames: [AWS, Google Cloud, Azure]
+    - title: Repository
+      required: [repoUrl]
+      properties:
+        repoUrl:
+          title: Repository location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts: [github.com]
+
+  steps:
+    - id: fetch
+      name: Render module skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          provider: ${{ parameters.provider }}
+          repoSlug: ${{ (parameters.repoUrl | parseRepoUrl).owner }}/${{ (parameters.repoUrl | parseRepoUrl).repo }}
+
+    - id: publish
+      name: Create repository
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        description: ${{ parameters.description }}
+        defaultBranch: main
+        repoVisibility: internal
+        protectDefaultBranch: true
+        requiredStatusCheckContexts: [validate]
+
+    - id: register
+      name: Register in catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}

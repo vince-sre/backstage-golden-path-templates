@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: terraform-${{ values.provider }}-${{ values.name }}
+  description: ${{ values.description | dump }}
+  annotations:
+    github.com/project-slug: ${{ values.repoSlug }}
+    backstage.io/techdocs-ref: dir:.
+  tags: [terraform, ${{ values.provider }}]
+spec:
+  type: terraform-module
+  lifecycle: experimental
+  owner: ${{ values.owner }}

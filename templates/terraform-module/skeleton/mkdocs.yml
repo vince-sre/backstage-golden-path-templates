@@ -1,0 +1,6 @@
+site_name: terraform-${{ values.provider }}-${{ values.name }}
+repo_url: https://github.com/${{ values.repoSlug }}
+nav:
+  - Overview: index.md
+plugins:
+  - techdocs-core

@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - uses: terraform-linters/setup-tflint@v4
+      - run: terraform fmt -check -recursive
+      - name: Validate module and examples
+        run: |
+          for dir in . examples/*/; do
+            echo "::group::${dir}"
+            terraform -chdir="${dir}" init -backend=false -input=false
+            terraform -chdir="${dir}" validate
+            echo "::endgroup::"
+          done
+      - run: tflint --init && tflint --recursive
+        env:
+          GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+      - name: Plan the example (no cloud credentials needed)
+        run: terraform -chdir=examples/basic plan -input=false
