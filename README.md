@@ -1,0 +1,1 @@
+# backstage-golden-path-templates

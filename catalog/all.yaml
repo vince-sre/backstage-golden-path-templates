@@ -1,0 +1,13 @@
+# Register this one file in app-config.yaml (catalog.locations) or via the
+# "Register existing component" page; it pulls in everything else.
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: golden-path-templates
+  description: Org entities and software templates for the platform golden paths
+spec:
+  type: url
+  targets:
+    - ./org.yaml
+    - ../templates/python-service/template.yaml
+    - ../templates/terraform-module/template.yaml

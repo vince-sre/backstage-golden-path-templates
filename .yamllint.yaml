@@ -1,0 +1,18 @@
+extends: default
+rules:
+  line-length:
+    max: 220
+    level: warning
+  document-start: disable
+  truthy:
+    allowed-values: ["true", "false", "on"]
+  comments:
+    min-spaces-from-content: 1
+  braces:
+    max-spaces-inside: 1
+# Skeletons are Nunjucks templates, not YAML, until rendered; tests lint the rendered output.
+ignore: |
+  templates/*/skeleton/
+  templates/*/gitops-skeleton/
+  .schemas/
+  .venv/

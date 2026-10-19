@@ -1,0 +1,27 @@
+# Example org structure. Replace with your own groups, or sync them from
+# your IdP (Microsoft Entra ID / Okta / GitHub org) with a catalog provider.
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: platform-team
+  description: Owns the golden paths, CI/CD templates and the Kubernetes platform
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: team-orders
+  description: Example product team
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: commerce
+  description: Example system that scaffolded services join
+spec:
+  owner: group:default/team-orders
