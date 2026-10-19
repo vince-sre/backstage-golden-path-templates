@@ -1,0 +1,1 @@
+* @${{ values.repoSlug.split('/')[0] }}/${{ values.owner | replace('group:default/', '') | replace('group:', '') }}

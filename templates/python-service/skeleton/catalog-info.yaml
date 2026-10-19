@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.name }}
+  description: ${{ values.description | dump }}
+  annotations:
+    github.com/project-slug: ${{ values.repoSlug }}
+    backstage.io/techdocs-ref: dir:.
+    argocd/app-selector: app.kubernetes.io/name=${{ values.name }}
+    prometheus.io/alert: ${{ values.name }}
+  tags: [python, ${{ values.tier }}]
+  labels:
+    tier: ${{ values.tier }}
+spec:
+  type: service
+  lifecycle: experimental
+  owner: ${{ values.owner }}
+{%- if values.system %}
+  system: ${{ values.system }}
+{%- endif %}

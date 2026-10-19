@@ -1,0 +1,147 @@
+# Golden path: a production-ready Python HTTP service in about five minutes.
+# Creates the repo (app, tests, Dockerfile, CI on the shared reusable
+# workflows, TechDocs), opens a PR to the GitOps repo to deploy it with the
+# shared Helm chart, and registers it in the catalog.
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: python-service
+  title: Python HTTP service
+  description: >-
+    Container-ready Python service with health checks, Prometheus metrics,
+    CI (build, scan, sign, SBOM), Argo CD deployment and TechDocs.
+  tags: [python, kubernetes, recommended]
+  links:
+    - url: https://github.com/vince-sre/cicd-pipeline-templates
+      title: Reusable CI workflows
+    - url: https://github.com/vince-sre/gitops-argocd-platform
+      title: GitOps repo and microservice chart
+spec:
+  owner: group:default/platform-team
+  type: service
+
+  parameters:
+    - title: Service details
+      required: [name, description, owner]
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Lowercase, used for the repo, image, Kubernetes resources and DNS
+          pattern: "^[a-z][a-z0-9-]{1,38}[a-z0-9]$"
+          ui:autofocus: true
+        description:
+          title: Description
+          type: string
+          maxLength: 200
+        owner:
+          title: Owner
+          type: string
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+        system:
+          title: System
+          type: string
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter:
+              kind: System
+        tier:
+          title: Service tier
+          type: string
+          description: Drives the default SLO, replica count and paging policy
+          default: tier-2
+          enum: [tier-1, tier-2, tier-3]
+          enumNames:
+            - "Tier 1: customer-facing, 99.9% SLO, pages on-call"
+            - "Tier 2: internal, 99.5% SLO, pages on-call in business hours"
+            - "Tier 3: batch/tools, 99% SLO, ticket only"
+
+    - title: Repository and deployment
+      required: [repoUrl]
+      properties:
+        repoUrl:
+          title: Repository location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts: [github.com]
+        gitopsRepo:
+          title: GitOps repository (owner/name)
+          type: string
+          default: vince-sre/gitops-argocd-platform
+        imageRegistry:
+          title: Image registry
+          type: string
+          default: ghcr.io/vince-sre
+
+  steps:
+    - id: fetch-service
+      name: Render service skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          tier: ${{ parameters.tier }}
+          repoSlug: ${{ (parameters.repoUrl | parseRepoUrl).owner }}/${{ (parameters.repoUrl | parseRepoUrl).repo }}
+          image: ${{ parameters.imageRegistry }}/${{ parameters.name }}
+
+    - id: publish
+      name: Create repository
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        description: ${{ parameters.description }}
+        defaultBranch: main
+        repoVisibility: internal
+        deleteBranchOnMerge: true
+        protectDefaultBranch: true
+        requiredStatusCheckContexts: [test]
+        requireCodeOwnerReviews: true
+
+    - id: fetch-gitops
+      name: Render deployment config
+      action: fetch:template
+      input:
+        url: ./gitops-skeleton
+        targetPath: ./gitops
+        values:
+          name: ${{ parameters.name }}
+          tier: ${{ parameters.tier }}
+          gitopsRepo: ${{ parameters.gitopsRepo }}
+          image: ${{ parameters.imageRegistry }}/${{ parameters.name }}
+
+    - id: gitops-pr
+      name: Open deployment PR
+      action: publish:github:pull-request
+      input:
+        repoUrl: github.com?owner=${{ parameters.gitopsRepo.split('/')[0] }}&repo=${{ parameters.gitopsRepo.split('/')[1] }}
+        sourcePath: ./gitops
+        branchName: onboard-${{ parameters.name }}
+        title: "Onboard ${{ parameters.name }}"
+        description: |
+          Scaffolded by the `python-service` golden path.
+          Adds dev/prod values and an ApplicationSet for **${{ parameters.name }}** (${{ parameters.tier }}).
+
+    - id: register
+      name: Register in catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Deployment PR
+        url: ${{ steps['gitops-pr'].output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
