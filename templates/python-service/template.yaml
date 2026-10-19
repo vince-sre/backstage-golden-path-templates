@@ -91,6 +91,7 @@ spec:
           tier: ${{ parameters.tier }}
           repoSlug: ${{ (parameters.repoUrl | parseRepoUrl).owner }}/${{ (parameters.repoUrl | parseRepoUrl).repo }}
           image: ${{ parameters.imageRegistry }}/${{ parameters.name }}
+          gitopsRepo: ${{ parameters.gitopsRepo }}
 
     - id: publish
       name: Create repository
